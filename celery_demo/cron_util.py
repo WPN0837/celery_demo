@@ -54,7 +54,7 @@ class MyBeat(Beat):
         return self.service
 
 
-beat = MyBeat(max_interval=10, app=celery_app, socket_timeout=30, pidfile=None, no_color=None,
+beat = MyBeat(max_interval=10, app=celery_app, socket_timeout=60, pidfile=None, no_color=None,
               loglevel='INFO', logfile=None, schedule=None, scheduler='celery.beat.PersistentScheduler',
               scheduler_cls=None,  # XXX use scheduler
               redirect_stdouts=None,
