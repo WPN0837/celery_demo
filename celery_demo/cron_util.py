@@ -1,5 +1,4 @@
 import socket
-import time
 import threading
 from celery import platforms
 from celery.schedules import crontab
@@ -8,13 +7,14 @@ from celery.utils.log import get_logger
 from celery_demo import celery_app
 
 logger = get_logger('celery.beat')
-flag = False
+beat = None
 
 
 class MyBeat(Beat):
     '''
     继承Beat 添加一个获取service的方法
     '''
+
     def start_scheduler(self):
         if self.pidfile:
             platforms.create_pidlock(self.pidfile)
@@ -54,19 +54,18 @@ class MyBeat(Beat):
         return self.service
 
 
-beat = MyBeat(max_interval=10, app=celery_app, socket_timeout=60, pidfile=None, no_color=None,
-              loglevel='INFO', logfile=None, schedule=None, scheduler='celery.beat.PersistentScheduler',
-              scheduler_cls=None,  # XXX use scheduler
-              redirect_stdouts=None,
-              redirect_stdouts_level=None)
-
-
-# 设置主动启动beat是为了避免使用celery -A celery_demo worker 命令重复启动worker
+# 设置主动启动beat是为了避免使用celery -A celery_demo beat -l info命令重复启动beat
 def run():
     '''
     启动Beat
     :return:
     '''
+    global beat
+    beat = MyBeat(max_interval=300, app=celery_app, socket_timeout=None, pidfile=None, no_color=None,
+                  loglevel='INFO', logfile=None, schedule=None, scheduler='celery.beat.PersistentScheduler',
+                  scheduler_cls=None,  # XXX use scheduler
+                  redirect_stdouts=None,
+                  redirect_stdouts_level=None)
     beat.run()
 
 
@@ -75,13 +74,10 @@ def new_thread():
     创建一个线程启动Beat 最多只能创建一个
     :return:
     '''
-    global flag
-    if not flag:
-        t = threading.Thread(target=run, daemon=True)
+    global beat
+    if beat is None:
+        t = threading.Thread(target=run)
         t.start()
-        # 启动成功2s后才能操作定时任务 否则可能会报错
-        time.sleep(2)
-        flag = True
 
 
 def add_cron_task(task_name: str, cron_task: str, minute='*', hour='*', day_of_week='*', day_of_month='*',
@@ -130,3 +126,6 @@ def get_cron_task():
     scheduler = service.scheduler
     ret = [{k: {"task": v.task, "crontab": v.schedule}} for k, v in scheduler.schedule.items()]
     return ret
+
+
+new_thread()

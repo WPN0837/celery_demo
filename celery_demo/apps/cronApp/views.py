@@ -54,5 +54,4 @@ def get_tasks(request):
     :param request:
     :return:
     '''
-    new_thread()
     return HttpResponse(json.dumps(tasks))
